@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>G-Dragon AI · 권지용</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+/* ===================== RESET & VARIABLES ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gold:       #c9a84c;
+  --gold-light: #f0d080;
+  --dark:       #0a0a0a;
+  --dark2:      #111111;
+  --dark3:      #1a1a1a;
+  --dark4:      #222222;
+  --white:      #f5f0e8;
+  --gray:       #888;
+  --green:      #27ae60;
+  --red:        #c0392b;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--dark);
+  color: var(--white);
+  font-family: 'Noto Sans KR', sans-serif;
+  overflow: hidden;
+}
+
+/* ===================== NOISE OVERLAY ===================== */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+
+/* ===================== BG LINES ===================== */
+.bg-lines { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.bg-line {
+  position: absolute; width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(201,168,76,.08), transparent);
+  animation: lineFloat 8s ease-in-out infinite;
+}
+.bg-line:nth-child(1) { left:10%; height:60%; top:20%; animation-delay:0s; }
+.bg-line:nth-child(2) { left:25%; height:80%; top:5%;  animation-delay:1.5s; }
+.bg-line:nth-child(3) { left:50%; height:70%; top:10%; animation-delay:3s; }
+.bg-line:nth-child(4) { left:75%; height:55%; top:25%; animation-delay:.8s; }
+.bg-line:nth-child(5) { left:90%; height:65%; top:15%; animation-delay:2s; }
+@keyframes lineFloat {
+  0%,100% { opacity:.3; transform:scaleY(.9); }
+  50%      { opacity:1;  transform:scaleY(1); }
+}
+
+/* ===================== LAYOUT ===================== */
+.app {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  height: 100vh;
+  max-width: 820px; margin: 0 auto; padding: 0 16px;
+}
+
+/* ===================== HEADER ===================== */
+header {
+  padding: 20px 0 16px;
+  display: flex; align-items: center; gap: 16px;
+  border-bottom: 1px solid rgba(201,168,76,.15);
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #3a2e10);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--dark);
+  flex-shrink: 0;
+  box-shadow: 0 0 24px rgba(201,168,76,.35);
+  position: relative;
+}
+.avatar::after {
+  content: '';
+  position: absolute; inset: -3px; border-radius: 50%;
+  border: 1px solid rgba(201,168,76,.4);
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:.3; transform:scale(1); }
+  50%      { opacity:1;  transform:scale(1.06); }
+}
+
+.header-text { flex:1; }
+.header-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; letter-spacing: 3px;
+  color: var(--gold-light); line-height: 1;
+}
+.header-sub {
+  font-size: 11px; color: var(--gray);
+  letter-spacing: 2px; text-transform: uppercase; margin-top: 3px;
+  font-family: 'Space Mono', monospace;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 7px var(--green);
+  animation: blink 2s ease-in-out infinite; display: inline-block;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.clear-btn {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,.2);
+  color: var(--gray);
+  padding: 6px 14px; border-radius: 8px;
+  font-size: 12px; cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  transition: all .2s;
+}
+.clear-btn:hover { border-color: var(--gold); color: var(--gold-light); }
+
+/* ===================== CHAT AREA ===================== */
+.chat-area {
+  flex: 1; overflow-y: auto;
+  padding: 16px 0;
+  display: flex; flex-direction: column; gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201,168,76,.2) transparent;
+}
+.chat-area::-webkit-scrollbar { width: 4px; }
+.chat-area::-webkit-scrollbar-thumb { background: rgba(201,168,76,.2); border-radius: 2px; }
+
+/* ===================== MESSAGES ===================== */
+.msg {
+  display: flex; gap: 12px;
+  animation: msgIn .28s ease-out;
+}
+@keyframes msgIn {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.msg.user { flex-direction: row-reverse; }
+
+.msg-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px;
+}
+.msg.bot  .msg-avatar { background: linear-gradient(135deg, var(--gold), #7a6020); color: var(--dark); }
+.msg.user .msg-avatar { background: var(--dark4); color: var(--gray); border: 1px solid #333; }
+
+.msg-bubble {
+  max-width: 72%; padding: 12px 16px; border-radius: 16px;
+  font-size: 14px; line-height: 1.65;
+}
+.msg.bot  .msg-bubble {
+  background: var(--dark3);
+  border: 1px solid rgba(201,168,76,.12);
+  border-top-left-radius: 4px;
+}
+.msg.user .msg-bubble {
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.25);
+  border-top-right-radius: 4px;
+}
+
+/* typing dots */
+.typing-dots { display:flex; gap:5px; align-items:center; padding:4px 0; }
+.typing-dots span {
+  width:7px; height:7px; border-radius:50%;
+  background: var(--gold);
+  animation: dot 1.2s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay:.2s; }
+.typing-dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes dot { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+
+/* ===================== QUICK REPLIES ===================== */
+.quick-replies {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 4px 0; flex-shrink: 0;
+}
+.quick-btn {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,.3);
+  color: var(--gold-light);
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; cursor: pointer;
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: all .2s; white-space: nowrap;
+}
+.quick-btn:hover { background: rgba(201,168,76,.1); border-color: var(--gold); }
+
+/* ===================== INPUT AREA ===================== */
+.input-area {
+  padding: 12px 0 20px;
+  border-top: 1px solid rgba(201,168,76,.12);
+  flex-shrink: 0;
+}
+.input-row {
+  display: flex; gap: 10px; align-items: flex-end;
+  background: var(--dark3);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 14px; padding: 10px 14px;
+  transition: border-color .2s;
+}
+.input-row:focus-within { border-color: rgba(201,168,76,.5); }
+
+textarea {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--white); font-family: 'Noto Sans KR', sans-serif;
+  font-size: 14px; resize: none;
+  min-height: 22px; max-height: 120px; line-height: 1.5;
+}
+textarea::placeholder { color: #555; }
+
+.send-btn {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--gold); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .2s;
+}
+.send-btn:hover  { background: var(--gold-light); transform: scale(1.05); }
+.send-btn:disabled { background: #2a2a2a; cursor: not-allowed; transform: none; }
+.send-btn svg { width: 16px; height: 16px; }
+
+/* ===================== TOAST ===================== */
+.toast {
+  position: fixed; top: 20px; right: 20px;
+  background: var(--red); color: white;
+  padding: 10px 18px; border-radius: 8px;
+  font-size: 13px; z-index: 100;
+  animation: toastIn .25s ease; max-width: 320px;
+}
+@keyframes toastIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 480px) {
+  .header-name { font-size: 22px; }
+  .msg-bubble   { max-width: 85%; font-size: 13px; }
+  .quick-btn    { font-size: 11px; padding: 5px 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-lines">
+  <div class="bg-line"></div><div class="bg-line"></div>
+  <div class="bg-line"></div><div class="bg-line"></div>
+  <div class="bg-line"></div>
+</div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="avatar">GD</div>
+    <div class="header-text">
+      <div class="header-name">G-DRAGON · 권지용</div>
+      <div class="header-sub">
+        <span class="status-dot"></span> AI Chatbot · JUST FOR FAM
+      </div>
+    </div>
+    <button class="clear-btn" onclick="clearChat()">🗑 Xoá chat</button>
+  </header>
+
+  <!-- CHAT AREA -->
+  <div class="chat-area" id="chatArea"></div>
+
+  <!-- QUICK REPLIES -->
+  <div class="quick-replies" id="quickReplies">
+    <button class="quick-btn" onclick="sendQuick('GD đang làm gì dạo này?')">GD đang làm gì?</button>
+    <button class="quick-btn" onclick="sendQuick('Bài hát yêu thích của GD là gì?')">Bài hát yêu thích?</button>
+    <button class="quick-btn" onclick="sendQuick('Phong cách thời trang của GD như thế nào?')">Phong cách thời trang</button>
+    <button class="quick-btn" onclick="sendQuick('GD có nhắn gì cho fan không?')">Nhắn gì cho fan?</button>
+    <button class="quick-btn" onclick="sendQuick('Album nào là tâm huyết nhất của GD?')">Album tâm huyết nhất?</button>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-area">
+    <div class="input-row">
+      <textarea
+        id="userInput"
+        rows="1"
+        placeholder="Nhắn tin với G-Dragon... (Enter để gửi)"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Gửi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===================== STATE =====================
+let messages = [];   // lịch sử hội thoại gửi lên backend
+let isLoading = false;
+
+// ===================== INIT =====================
+window.addEventListener('DOMContentLoaded', () => {
+  appendMessage('bot', 'Annyeong~ 👋 Anh là G-Dragon đây! Rất vui được gặp các em hôm nay.\nCác em muốn hỏi anh điều gì không? 사랑해 ❤️');
+});
+
+// ===================== RENDER HELPERS =====================
+function appendMessage(role, text) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'bot' ? 'GD' : 'YOU'}</div>
+    <div class="msg-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showTyping() {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar">GD</div>
+    <div class="msg-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+function removeTyping() {
+  document.getElementById('typingIndicator')?.remove();
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ===================== SEND MESSAGE =====================
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  appendMessage('user', text);
+  messages.push({ role: 'user', content: text });
+  input.value = ''; autoResize(input);
+
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  showTyping();
+
+  try {
+    // Gọi backend tại /api/chat — API key được giấu trong .env
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lỗi server');
+
+    messages.push({ role: 'assistant', content: data.reply });
+    removeTyping();
+    appendMessage('bot', data.reply);
+
+  } catch (err) {
+    removeTyping();
+    showToast('❌ ' + err.message);
+    appendMessage('bot', 'Ôi, có gì đó trục trặc rồi... Thử lại sau nhé FAM! 😅');
+  } finally {
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+// ===================== HELPERS =====================
+function sendQuick(text) {
+  document.getElementById('userInput').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function clearChat() {
+  messages = [];
+  const area = document.getElementById('chatArea');
+  area.innerHTML = '';
+  appendMessage('bot', 'Chat đã được xoá! Bắt đầu lại thôi FAM~ 😊');
+}
+</script>
+</body>
+</html>
